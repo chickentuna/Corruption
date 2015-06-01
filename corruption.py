@@ -6,7 +6,6 @@ def log(t):
 CORRUPTION_TIME = 3
 ORC_TIME = 5
 FOREST_TIME = 2
-#FOREST_HP = 1
 
 class Coord(object):
     def __init__(self, x, y):
@@ -80,10 +79,9 @@ class Game(object):
 
         turn = 0
         dead = False
-        countDown = {
-            'corruption': CORRUPTION_TIME,
-            'orc': ORC_TIME
-        }
+        self.corruptionTime = CORRUPTION_TIME
+        self.orcTime = ORC_TIME
+
         self.sendInitInfo()
         while not dead:
             turn += 1
@@ -91,33 +89,43 @@ class Game(object):
             commands = self.getInstructions()
             if len(commands) != len(elves):
                 dead = True
-                continue    
+                continue
             
-            #move elves
-            for i in range(commands):
-                elf = elves[i]
-                command = commands[i]
-                if command != 'WAIT':
-                    map.get(elf).elves -= 1
-                    elf.move(command, land)
-                    map.get(elf).elves += 1
-            #move orcs
-            for orc in orc:
-                #move to closest tree
-                pass
-            #spread corruption
-            countDown['corruption'] -= 1
-            if countDown['corruption'] == 0:
-                countDown['corruption'] = CORRUPTION_TIME
-                pass
-            #spawn orcs
-            countDown['orc'] -= 1
-            if countDown['orc'] == 0:
-                countDown['orc'] = ORC_TIME
-                pass
-            #spread forests
+            self.moveElves()
+            self.moveOrcs()
+            self.spreadCorruption()
+            self.trainOrcs()
+            self.spreadForests()
+            #output new map
             pass
-        
+    def spreadForests(self):
+        #spread forests
+        pass
+    def trainOrcs(self):
+        orcTime -= 1
+        if orcTime == 0:
+            orcTime = ORC_TIME
+            #spawn orcs
+            pass
+
+    def spreadCorruption(self):
+        corruptionTime -= 1
+        if corruptionTime == 0:
+            corruptionTime = CORRUPTION_TIME
+            #spread
+            pass
+    def moveOrcs(self):
+        for orc in orc:
+            #move to closest tree
+            pass
+    def moveElves(self):
+        for i in range(commands):
+            elf = elves[i]
+            command = commands[i]
+            if command != 'WAIT':
+                map.get(elf).elves -= 1
+                elf.move(command, land)
+                map.get(elf).elves += 1
     def sendInitInfo(self):
         land = self.land
         elves = self.elves
