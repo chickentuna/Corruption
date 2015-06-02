@@ -12,7 +12,10 @@ class Coord(object):
     def __init__(self, x, y):
         self.x = x
         self.y = y
+        self.target = None
     def __eq__(self, other):
+        if other is None:
+            return False
         return self.x == other.x and self.y == other.y
     def __hash__(self):
         return self.x * 2 + self.y * 3
@@ -87,7 +90,7 @@ class Game(object):
 
         land.get(0,9).rivendell = True
         for i in range(10):
-            if (i != 5):
+            if (i < 4 or i > 6):
                 land.get(i,i).elves += 1
                 self.elves.append(Coord(i,i))
             land.get(i,i).forest = True
@@ -213,7 +216,7 @@ class Game(object):
                     if orc.target is not None and orc.target.targetedBy == orc:
                         orc.target.targetedBy = None
                     orc.targetDistance = least
-                    orc.target = closest
+                    orc.target = forest
                     print(orc, 'going to', closest)
 
                 land.get(orc).orcs -= 1
