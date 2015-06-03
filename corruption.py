@@ -1,12 +1,14 @@
 import sys
 import os
-from random import choice
+import time
+from random import choice, randrange, seed
+
 def log(t):
     print(t, file=sys.stderr)
 
 CORRUPTION_TIME = 3
-ORC_TIME = 10
-FOREST_TIME = 2
+ORC_TIME = 12
+#FOREST_TIME = 2
 
 class Coord(object):
     def __init__(self, x, y):
@@ -77,28 +79,29 @@ class Grid(object):
 class Game(object):
     def __init__(self):
         #construction of a mockup map
+        self.land = Grid(60,6)
         self.elves = []
-        self.towers = [Coord(9,0)]
+        self.towers = []
         self.orcs = []
         self.forests = []
-        self.land = Grid(10,10)
         
         forests = self.forests
         elves = self.elves
         towers = self.towers
         land = self.land
+        orcs = self.orcs
+        self.generateMap()
 
-        land.get(0,9).rivendell = True
-        for i in range(10):
-            if (i < 4 or i > 6):
-                land.get(i,i).elves += 1
-                self.elves.append(Coord(i,i))
-            land.get(i,i).forest = True
-            forests.append(Coord(i,i))
+        self.rivendell.rivendell = True        
         for elf in elves:
             land.get(elf).elves += 1
+        for orc in orcs:
+            land.get(orc).orcs += 1
         for tower in towers:
-            land.get(tower).tower = True
+            tower.tower = True
+            tower.corrupted = True
+        for forest in forests:
+            forest.forest = True
 
         turn = 0
         dead = False
@@ -106,10 +109,10 @@ class Game(object):
         self.orcTime = ORC_TIME
 
         self.sendInitInfo()
+        self.sendTurnInfo()
         while not dead:
             turn += 1
-            input()
-            self.sendTurnInfo()            
+            time.sleep (.2);
             commands = self.getInstructions()
             if len(commands) != len(elves):
                 dead = True
@@ -121,32 +124,54 @@ class Game(object):
             self.combat()
             self.spreadCorruption()
             self.spreadForests()
-        print ('You survived',turns,'turns.')
+            if self.rivendell.corrupted:
+                dead = True
+            self.sendTurnInfo()
+        print ('You survived',turn,'turns.')
+
+    def generateMap(self):
+        land = self.land
+        elves = self.elves
+        towers = self.towers
+        forests = self.forests
+
+        elfCount = int(min(land.height, land.width) / 2) - 1
+        self.rivendell = land.get(0, randrange(land.height / 3, 2 * land.height / 3))
+        t = land.get(land.width-1, randrange(land.height / 3, 2 * land.height / 3))
+        towers.append(t)
+        for i in range(elfCount):
+            elves.append(Coord(0, self.rivendell.y))
+        forestCount = randrange(land.height, pow(land.height, 2))
+        saplings = set()
+        for i in range(forestCount):
+            x = randrange(1, land.width - 1)
+            y = randrange(0, land.height)
+            saplings.add(land.get(x,y))
+        for sapling in saplings:
+            forests.append(sapling)
+
     def spreadForests(self):
         forests = self.forests
         elves = self.elves
         land = self.land
-
-        print(len(forests))
         
         spreadTo = set()
         for forest in forests:
-            cell = land.get(forest)
-            if cell.elves > 0 and not cell.battle():
-                for neighbour in cell.getNeighbours(land):
+            if forest.elves > 0 and not forest.battle():
+                for neighbour in forest.getNeighbours(land):
                     spreadTo.add(neighbour)
         for cell in spreadTo:
             if not cell.tower and not cell.rivendell and not cell.forest:
                 cell.corrupted = False
                 cell.forest = True
-                forests.append(Coord(cell.x, cell.y))
-        print(len(forests))
+                forests.append(cell)
+
     def trainOrcs(self):
         self.orcTime -= 1
         if self.orcTime == 0:
             self.orcTime = ORC_TIME
             for tower in self.towers:
-                self.land.get(tower).orcs += 1
+                tower.orcs += 1
                 self.orcs.append(Coord(tower.x, tower.y))
     def combat(self):
         orcs = self.orcs
@@ -155,15 +180,13 @@ class Game(object):
 
         mills = set()
         for orc in orcs:
-            if orc in forests:
-                if land.get(orc).elves < land.get(orc).orcs:
-                    mills.add(orc)
+            cell = land.get(orc)
+            if cell.forest:
+                if cell.elves < cell.orcs:
+                    mills.add(cell)
         for forest in mills:
             forests.remove(forest)
-            land.get(forest).forest = False
-            land.get(forest).targetedBy = None
-
-
+            forest.forest = False
     def spreadCorruption(self):
         land = self.land
 
@@ -174,7 +197,7 @@ class Game(object):
             for x in range(land.width):
                 for y in range(land.height):
                     cell = land.get(x,y)
-                    if cell.tower or cell.corrupted:
+                    if cell.corrupted:
                         for neighbour in cell.getNeighbours(land):
                             toCorrupt.add(neighbour)
             for cell in toCorrupt:
@@ -193,10 +216,9 @@ class Game(object):
                 least = -1
 
                 for forest in forests:
-                    targetedBy = land.get(forest).targetedBy
-                    d = forest.distanceTo(orc)
-                    if targetedBy is not None and targetedBy is not orc and targetedBy.targetDistance <= d:
+                    if forest.orcs > forest.elves:
                         continue
+                    d = forest.distanceTo(orc)
                     if least == -1 or d < least:
                         closests = [forest]
                         least = d
@@ -209,15 +231,6 @@ class Game(object):
 
                 if closest in forests:
                     forest = land.get(closest)
-                    targetedBy = forest.targetedBy
-                    if not forest.battle() and targetedBy is not None and targetedBy is not orc:
-                        redo = True
-                    forest.targetedBy = orc
-                    if orc.target is not None and orc.target.targetedBy == orc:
-                        orc.target.targetedBy = None
-                    orc.targetDistance = least
-                    orc.target = forest
-                    print(orc, 'going to', closest)
 
                 land.get(orc).orcs -= 1
                 if abs(dx) > abs(dy):
@@ -229,8 +242,6 @@ class Game(object):
                 elif dy != 0:
                     orc.move('DOWN' if dy > 0 else 'UP')
                 land.get(orc).orcs += 1
-                if redo:
-                    break
 
     def moveElves(self, commands):
         elves = self.elves
@@ -300,5 +311,15 @@ class Game(object):
         return ['WAIT' for i in range(len(self.elves))];
 
 if __name__ == '__main__':
-    game = Game()  
-
+    if len(sys.argv) > 1:
+        try:
+            seed(sys.argv[1])
+        except ValueError:
+            print('Not a valid int:', sys.argv[1])
+    else:
+        s = str(time.time())
+        seed()
+        log = open('corruption.log', 'w')
+        log.write('seed = "' + s + '"')
+        log.close()
+    game = Game()
