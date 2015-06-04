@@ -133,7 +133,7 @@ class Game(object):
             if self.rivendell.corrupted:
                 self.dead = True
             self.sendTurnInfo()
-        log('You survived',turn,'turns.')
+        log(('You survived',turn,'turns.'))
 
     def generateMap(self):
         land = self.land
