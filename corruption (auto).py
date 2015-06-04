@@ -4,10 +4,7 @@ import time
 from random import choice, randrange, seed
 
 def log(t):
-    if isinstance(t, tuple):
-        print(*t, file=sys.stderr)    
-    else:
-        print(t, file=sys.stderr)
+    print(t, file=sys.stderr)
 
 CORRUPTION_TIME = 3
 ORC_TIME = 12
@@ -25,8 +22,7 @@ class Coord(object):
     def __hash__(self):
         return self.x * 2 + self.y * 3
     def __repr__(self):
-        return str(self.x) + ' ' + str(self.y)
-        # return '(' + str(self.x) + ',' + str(self.y) + ')'
+        return '(' + str(self.x) + ',' + str(self.y) + ')'
     def distanceTo(self, other):
         return abs(self.x - other.x) + abs(self.y - other.y)
     def move(self, direction, bounds=None):
@@ -39,11 +35,9 @@ class Coord(object):
         elif direction == 'UP':
             self.y-= 1
         else:
-            log(('invalid move', self, direction))
-            self.dead = True
+            log('invalid move')
         if bounds is not None and (self.x < 0 or self.y < 0 or self.x > bounds.width or self.y > bounds.height):
-            log(('moved out of bounds', self, direction))
-            self.dead = True
+            log('moved out of bounds')
 
 class Cell(Coord):
     def __init__(self, x, y):
@@ -110,18 +104,18 @@ class Game(object):
             forest.forest = True
 
         turn = 0
-        self.dead = False
+        dead = False
         self.corruptionTime = CORRUPTION_TIME
         self.orcTime = ORC_TIME
 
         self.sendInitInfo()
         self.sendTurnInfo()
-        while not self.dead:
+        while not dead:
             turn += 1
             time.sleep (.2);
             commands = self.getInstructions()
             if len(commands) != len(elves):
-                self.dead = True
+                dead = True
                 continue
 
             self.moveElves(commands)
@@ -131,9 +125,9 @@ class Game(object):
             self.spreadCorruption()
             self.spreadForests()
             if self.rivendell.corrupted:
-                self.dead = True
+                dead = True
             self.sendTurnInfo()
-        log('You survived',turn,'turns.')
+        print ('You survived',turn,'turns.')
 
     def generateMap(self):
         land = self.land
@@ -260,7 +254,7 @@ class Game(object):
                 elf.move(command, land)
                 land.get(elf).elves += 1
     def printGame(self):
-        sys.stderr.write("\x1b[2J\x1b[H")
+        os.system('clear')
         land = self.land
         for row in land.array:
             out = ''
@@ -281,19 +275,12 @@ class Game(object):
                     out += '#'
                 else:
                     out += ' '
-            log(out)
+            print(out)
 
     def sendInitInfo(self):
         land = self.land
-        print(land.width, land.height)
-
-    def sendTurnInfo(self):
-        land = self.land
         elves = self.elves
-        orcs = self.orcs
-        
-        self.printGame()
-
+        print(land.width,land.height, len(elves))
         for row in land.array:
             out = ''
             for cell in row:
@@ -308,28 +295,31 @@ class Game(object):
                 else:
                     out += ' '
             print(out)
-        print(len(elves))
         for elf in elves:
             print(elf.x, elf.y)
+        
+
+    def sendTurnInfo(self):
+        self.printGame()
+        return
+        orcs = self.orcs
         print(len(orcs))
         for orc in orcs:
             print(orc.x, orc.y)
-        
-        sys.stdout.flush()
 
     def getInstructions(self):
-        return [input() for i in range(len(self.elves))]
+        return ['WAIT' for i in range(len(self.elves))];
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         try:
             seed(sys.argv[1])
         except ValueError:
-            log('Not a valid int:', sys.argv[1])
+            print('Not a valid int:', sys.argv[1])
     else:
         s = str(time.time())
         seed()
-        f = open('corruption.log', 'w')
-        f.write('seed = "' + s + '"')
-        f.close()
+        log = open('corruption.log', 'w')
+        log.write('seed = "' + s + '"')
+        log.close()
     game = Game()
