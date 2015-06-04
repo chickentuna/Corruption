@@ -10,7 +10,7 @@ def log(t):
         print(t, file=sys.stderr)
 
 CORRUPTION_TIME = 3
-ORC_TIME = 12
+ORC_TIME = 60
 #FOREST_TIME = 2
 
 class Coord(object):
@@ -163,7 +163,7 @@ class Game(object):
         
         spreadTo = set()
         for forest in forests:
-            if forest.elves > 0 and not forest.battle():
+            if forest.elves > forest.orcs:
                 for neighbour in forest.getNeighbours(land):
                     spreadTo.add(neighbour)
         for cell in spreadTo:
