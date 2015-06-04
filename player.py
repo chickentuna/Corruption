@@ -25,15 +25,23 @@ class Coord(object):
 
 width, height = [int(i) for i in input().split()]
 
+def forestCompatible(c, rivendell):
+    return (c not in forests and c.x >=0 and c.y >= 0 and c.x < width and c.y < height and c != rivendell)
+
 # game loop
 while 1:
     elves = []
     forests = []
+    grid = []
+    rivendell = None
     for y in range(height):
-        row = input()
-        for x in range(len(row)):
-            if row[x] == 'F':
+        grid.append(input())
+    for x in range(width):
+        for y in range(height):
+            if grid[y][x] == 'F':
                 forests.append(Coord(x,y))
+            elif grid[y][x] == 'R':
+                rivendell = Coord(x,y)
     elfCount = int(input())
     for i in range(elfCount):
         elfX, elfY = [int(j) for j in input().split()]
@@ -51,7 +59,7 @@ while 1:
                             Coord(forest.x, forest.y + 1),
                             Coord(forest.x - 1, forest.y),
                             Coord(forest.x + 1, forest.y))
-                    if any([(c not in forests and c.x >=0 and c.y >= 0 and c.x < width and c.y < height) for c in neigh]):
+                    if any([forestCompatible(c, rivendell) for c in neigh]):
                         forest.target = elf
                         elf.target = forest
                         break
